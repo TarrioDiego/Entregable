@@ -2,14 +2,11 @@ import requests
 import pandas as pd
 import json
 import psycopg2
-
+from constants import Ids_moneda
 
 
 # Definir la URL del endpoint de la API de CoinGecko
 url = 'https://api.coingecko.com/api/v3/coins/markets'
-
-# Definir Ids de monedas a extraer
-Ids_moneda= 'bitcoin,ethereum,tether,binancecoin,solana,staked-ether,ripple,usd-coin,cardano,dogecoin,shiba-inu'
 
 # Parámetros de la solicitud
 params = {
@@ -85,7 +82,6 @@ CREATE TABLE coins_data (
     Atl DECIMAL,
     Atl_Change_Percentage DECIMAL,
     Atl_Date DATE,
-    Roi DECIMAL,
     Last_Updated TIMESTAMP
 );
 """
@@ -94,7 +90,21 @@ CREATE TABLE coins_data (
 # Ejecutar la consulta para crear la tabla
 cur.execute(create_table_query)
 
-# Confirmar la transacción y cerrar la conexión
+# Confirmar la transacción 
 conn.commit()
+
+
+# Realizo la transformacion de los datos
+df.drop(columns='Roi', inplace=True)
+columns = ['Ath_Date', 'Atl_Date', 'Last_Updated']
+for campo in columns:
+    df[campo] = pd.to_datetime(df[campo])
+
+
+# Carga de los datos en mi tabla de redshift
+df.to_sql('coins_data', conn, if_exists='append')
+
+# Cerrar la conexion
 cur.close()
 conn.close()
+
